@@ -1,6 +1,8 @@
 # permutation-validation
 [![GitHub release](https://img.shields.io/github/v/release/wan-huiyan/permutation-validation)](https://github.com/wan-huiyan/permutation-validation/releases) [![Claude Code](https://img.shields.io/badge/Claude_Code-skill-orange)](https://claude.com/claude-code) [![license](https://img.shields.io/github/license/wan-huiyan/permutation-validation)](LICENSE) [![last commit](https://img.shields.io/github/last-commit/wan-huiyan/permutation-validation)](https://github.com/wan-huiyan/permutation-validation/commits)
 
+> **DEPRECATED:** Permutation validation is now built into [causal-impact-campaign](https://github.com/wan-huiyan/causal-impact-campaign) v1.6.0+ as Step 6 (permutation tests, placebo FPR calibration, rolling backtests). This standalone repo is archived for reference. New users should install causal-impact-campaign instead.
+
 Validate causal inference model results using empirical permutation tests.
 
 A Claude Code skill that checks whether a causal impact p-value (from BSTS, tfcausalimpact, CausalPy, etc.) is trustworthy by running the same model on many random intervention dates and comparing the real effect to the resulting null distribution.
@@ -44,7 +46,7 @@ Claude: I'll run a permutation test to validate your BSTS causal impact estimate
 ## Installation
 
 ```bash
-claude install-skill github:wan-huiyan/permutation-validation
+git clone https://github.com/wan-huiyan/permutation-validation.git ~/.claude/skills/permutation-validation
 ```
 
 ## Key insights encoded in this skill
