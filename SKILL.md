@@ -1,6 +1,6 @@
 ---
 name: permutation-validation
-version: "1.0.0"
+version: "1.1.0"
 description: |
   Validate causal inference model results using empirical permutation tests. Use this skill whenever
   the user wants to check if a causal impact p-value is trustworthy, run a permutation or
@@ -48,6 +48,26 @@ run the exact same model, how often do I get an effect estimate as large as the 
 
 If the answer is "often" (permutation p > 0.15), then the model-based p-value is not trustworthy —
 you're seeing a pattern that the model would find anywhere in the data.
+
+### Why compare EFFECT SIZES, not p-values (CRITICAL)
+
+The permutation test MUST compare absolute effect sizes (`|abs_eff|`), NOT model p-values.
+This follows the established causal inference literature:
+
+- **Abadie et al. (2010 JASA, 2021 JEL)**: Synthetic control permutation uses the post/pre MSPE
+  *ratio* (an effect-size statistic), not model p-values
+- **Linden (2018, J Eval Clin Pract)**: ITS permutation compares the *magnitude* of trend changes
+- **Young (2019, QJE)**: Model p-values inflate under misspecification; randomization inference
+  using effect estimates is robust
+
+**The mechanism**: A model p-value = effect / estimated_uncertainty. When uncertainty is systematically
+underestimated (e.g., BSTS VI/HMC/Prophet all show 35-55% FPR on daily retail data), the p-value is
+distorted at every permuted date equally. Comparing p-values therefore inherits the model's FPR.
+Effect-size comparison is immune because the inflation cancels in the relative ranking.
+
+**Empirical evidence**: In one engagement, comparing p-values showed 0/15 specs passing permutation.
+Switching to effect-size comparison on the same data recovered spec 348 at perm p=0.032.
+The difference is not statistical noise — it's a fundamental methodological choice.
 
 ## When to Use
 
@@ -236,8 +256,45 @@ placebo_end = real_intervention_date - pd.Timedelta(days=5)
 A good model should show p > 0.20 on the placebo test (no false positive). If the placebo test
 shows p < 0.10, the model is finding effects where none exist — likely overfit.
 
+## SCA Permutation Validation (Specification Curve Analysis)
+
+When running a full SCA (hundreds of specs across covariate bundles and pre-period modes),
+permutation-validate the **top N specs** rather than all specs to keep compute manageable.
+
+**Recommended approach:**
+- Select top 50 specs by p-value from the SCA results
+- Run 10 permutation shuffles per spec = 500 parallel tasks on Cloud Run
+- Add a `perm_p` column to the SCA detail table
+- Flag any spec where perm_p > 0.10 as potentially spurious
+
+**Why top-N instead of all specs:**
+- Full SCA × full permutations (e.g., 448 × 50 = 22,400 tasks) is prohibitively expensive
+- The bottom-ranked specs (p > 0.30) are already non-significant — permutation adds nothing
+- The top specs are the ones you'd actually report to stakeholders
+
+**Short pre-period caveat:**
+When the best specs cluster in a short pre-period mode (e.g., 54-day post-holiday window),
+the permutation space is smaller (fewer candidate fake intervention dates). This reduces
+statistical power of the permutation test itself. Use at least 10 shuffles and interpret
+conservatively. If perm_p = 0.10 with 10 shuffles, that's 1/10 — borderline. With 50 shuffles
+and perm_p = 0.08, that's 4/50 — more robust.
+
+**Pre-period mode comparison:**
+Run permutation on the top 3-5 specs from EACH pre-period mode (not just the best overall).
+If the short pre-period specs pass permutation AND the full-period specs show directional
+consistency (positive effect, even if higher p), that's convergent validity. If the short
+pre-period specs pass but the full-period specs show opposite direction, that's a red flag.
+
+**Prior empirical results from retail SCA:**
+- Sale signals alone: passed BSTS p-value (0.033) but FAILED permutation (0.140)
+- Sale signals + external Trends: passed both (BSTS 0.011, perm 0.080)
+- External Trends alone: strongest pass (BSTS 0.008, perm 0.040)
+- Lesson: external exogenous signals carry robust causal information; endogenous sale signals
+  need external support to pass permutation validation
+
 ## Composability
 
 - Use after `causal-impact-campaign` to validate findings
 - Pairs with `cloud-run-batch-experiment` for scaling permutation runs
 - Feed results into stakeholder deliverables with honest dual-p-value framing
+- For SCA: run after `generate_sca_specs()` produces results, before client presentation
