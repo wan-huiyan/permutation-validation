@@ -1,4 +1,5 @@
 # permutation-validation
+[![GitHub release](https://img.shields.io/github/v/release/wan-huiyan/permutation-validation)](https://github.com/wan-huiyan/permutation-validation/releases) [![Claude Code](https://img.shields.io/badge/Claude_Code-skill-orange)](https://claude.com/claude-code) [![license](https://img.shields.io/github/license/wan-huiyan/permutation-validation)](LICENSE) [![last commit](https://img.shields.io/github/last-commit/wan-huiyan/permutation-validation)](https://github.com/wan-huiyan/permutation-validation/commits)
 
 Validate causal inference model results using empirical permutation tests.
 
